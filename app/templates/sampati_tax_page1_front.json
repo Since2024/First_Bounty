@@ -1,0 +1,330 @@
+{
+    "forms": [{
+        "name": "सम्पत्ति तथा भूमिकर फारम",
+        "form_type": "Land Tax Form",
+        "description": "Template for digitizing सम्पत्ति तथा भूमिकर फारम with OCR + Auto Fill",
+        "version": "1.0",
+        "source": "FirstChild Project - Since2024",
+        "template_id": "land_tax_form",
+        "metadata": {
+            "image_filename": "sampati_front.jpg",
+            "paper_size_mm": {
+                "width": 210,
+                "height": 297
+            },
+            "dpi": 300,
+            "pixel_to_mm": 0.248,
+            "image_dimensions_px": {
+                "width": 847,
+                "height": 1197
+            }
+        },
+        "fields": [{
+                "id": "f001",
+                "name": "आन्तरिक संकेत नं",
+                "label": "Economic Code Number",
+                "type": "box_grid",
+                "page": 1,
+                "bbox": {
+                    "px": [74, 111, 161, 40],
+                    "mm": [14.8, 16.1, 42.2, 13.6]
+                },
+                "grid": {
+                    "boxes": 5,
+                    "spacing": 28.3,
+                    "box_width": 26
+                },
+                "ocr": {
+                    "lang": "eng",
+                    "psm": 8,
+                    "whitelist": "0123456789"
+                },
+                "validate": {
+                    "req": true,
+                    "type": "number",
+                    "len": 5
+                },
+                "desc": "Economic code number in 5-digit box grid format",
+                "conf": 0.95
+            },
+            {
+                "id": "f002",
+                "name": "जग्गा/धनीको नाम र थर",
+                "label": "Land Owner Name",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [227, 537, 389, 19],
+                    "mm": [43.0, 105.7, 147.6, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": true,
+                    "type": "string",
+                    "min_len": 5
+                },
+                "desc": "Primary land owner's full name",
+                "conf": 0.95
+            },
+            {
+                "id": "f003",
+                "name": "बाबु/पतिको नाम र थर",
+                "label": "Father/Husband Name",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [227, 584, 441, 17],
+                    "mm": [51.5, 114.8, 139.0, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": false,
+                    "type": "string"
+                },
+                "desc": "Father's or husband's name",
+                "conf": 0.95
+            },
+            {
+                "id": "f004",
+                "name": "बाजे/ससुराको नाम र थर",
+                "label": "Grandfather/Father-in-law Name",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [228, 627, 444, 18],
+                    "mm": [57.9, 123.9, 133.5, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": false,
+                    "type": "string"
+                },
+                "desc": "Grandfather's or father-in-law's name",
+                "conf": 0.95
+            },
+            {
+                "id": "f005",
+                "name": "जग्गाधनीको पन नं",
+                "label": "Land Owner ID Number",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [220, 669, 463, 19],
+                    "mm": [46.7, 133.0, 143.8, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep+eng",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": false,
+                    "type": "alphanumeric"
+                },
+                "desc": "Land owner identification number",
+                "conf": 0.95
+            },
+            {
+                "id": "f006",
+                "name": "जग्गाधनीको स्थायी ठेगाना",
+                "label": "Permanent Address",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [238, 712, 508, 18],
+                    "mm": [63.7, 142.1, 127.6, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": true,
+                    "type": "string"
+                },
+                "desc": "Permanent address of land owner",
+                "conf": 0.95
+            },
+            {
+                "id": "f007",
+                "name": "मोबाइल नं",
+                "label": "Mobile Number",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [169, 758, 509, 19],
+                    "mm": [38.2, 151.2, 153.9, 7.3]
+                },
+                "ocr": {
+                    "lang": "eng",
+                    "psm": 7,
+                    "whitelist": "0123456789+-"
+                },
+                "validate": {
+                    "req": true,
+                    "type": "phone",
+                    "pattern": "^[0-9]{10}$"
+                },
+                "desc": "Mobile contact number",
+                "conf": 0.95
+            },
+            {
+                "id": "f008",
+                "name": "ई-मेल",
+                "label": "Email",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [145, 800, 564, 21],
+                    "mm": [29.4, 160.3, 162.6, 7.3]
+                },
+                "ocr": {
+                    "lang": "eng",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": false,
+                    "type": "email",
+                    "pattern": "^[a-zA-Z0-9._%+-]+@([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}$"
+                },
+                "desc": "Email address",
+                "conf": 0.93
+            },
+            {
+                "id": "f009",
+                "name": "नाम थर",
+                "label": "Name of Person Submitting",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [115, 917, 255, 21],
+                    "mm": [36.7, 174.5, 98.8, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": true,
+                    "type": "string",
+                    "min_len": 2
+                },
+                "desc": "Full name of person submitting the form",
+                "conf": 0.95
+            },
+            {
+                "id": "f010",
+                "name": "ठेगाना",
+                "label": "Address of Submitter",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [110, 952, 325, 22],
+                    "mm": [36.7, 182.8, 98.8, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": true,
+                    "type": "string"
+                },
+                "desc": "Permanent address of person submitting the form",
+                "conf": 0.95
+            },
+            {
+                "id": "f011",
+                "name": "जग्गा/धनीसँगको सम्बन्ध",
+                "label": "Relationship to Landowner",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [201, 987, 231, 21],
+                    "mm": [36.7, 191.1, 98.8, 7.3]
+                },
+                "ocr": {
+                    "lang": "nep",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": true,
+                    "type": "string"
+                },
+                "desc": "Relationship of submitter to landowner (e.g., owner, son, agent)",
+                "conf": 0.95
+            },
+            {
+                "id": "f012",
+                "name": "मोबाइल नं",
+                "label": "Submitter's Mobile Number",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [129, 1026, 291, 20],
+                    "mm": [36.7, 199.4, 98.8, 7.3]
+                },
+                "ocr": {
+                    "lang": "eng",
+                    "psm": 7,
+                    "whitelist": "0123456789+-"
+                },
+                "validate": {
+                    "req": true,
+                    "type": "phone",
+                    "pattern": "^[0-9]{10}$"
+                },
+                "desc": "Contact number of person submitting the form",
+                "conf": 0.95
+            },
+            {
+                "id": "f014",
+                "name": "मिति",
+                "label": "Submission Date",
+                "type": "text_line",
+                "page": 1,
+                "bbox": {
+                    "px": [97, 1062, 313, 19],
+                    "mm": [147.6, 229.0, 44.3, 7.4]
+                },
+                "ocr": {
+                    "lang": "eng",
+                    "psm": 7
+                },
+                "validate": {
+                    "req": true,
+                    "type": "date",
+                    "format": "YYYY-MM-DD"
+                },
+                "desc": "Date when the form was submitted",
+                "conf": 1.0
+            },
+            {
+                "id": "f013",
+                "name": "स्थायी हस्ताक्षर",
+                "label": "Permanent Signature",
+                "type": "signature_box",
+                "page": 1,
+                "bbox": {
+                    "px": [110, 1094, 220, 73],
+                    "mm": [147.6, 210.5, 44.3, 14.8]
+                },
+                "ocr": null,
+                "validate": {
+                    "req": false,
+                    "type": "image"
+                },
+                "desc": "Digital signature of the submitter",
+                "conf": 1.0
+            }
+        ]
+    }]
+}

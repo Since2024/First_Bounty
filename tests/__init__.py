@@ -1,0 +1,2 @@
+"""Tests for FOMO application."""
+

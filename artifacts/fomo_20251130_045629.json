@@ -1,0 +1,72 @@
+{
+  "f001": {
+    "value": "",
+    "confidence": 0.0,
+    "notes": "Office assigned only, not to be filled from source."
+  },
+  "f002": {
+    "value": "हसन गाहा",
+    "confidence": 1.0,
+    "notes": "Extracted from 'नाम थर:' on citizenship. [edited]"
+  },
+  "f003": {
+    "value": "धन राज गाहा",
+    "confidence": 1.0,
+    "notes": "Extracted from 'बाबुको नाम थर:' on citizenship. [edited]"
+  },
+  "f004": {
+    "value": "",
+    "confidence": 0.0,
+    "notes": "No direct matching field found in the source document."
+  },
+  "f005": {
+    "value": "",
+    "confidence": 0.0,
+    "notes": "Not to be mapped from citizenship number. No other source found."
+  },
+  "f006": {
+    "value": "कालीगण्डकी गा०पा०-१, स्याङ्जा",
+    "confidence": 1.0,
+    "notes": "Extracted from 'ठेगाना' field under father's name, which refers to the certificate holder's address. [edited]"
+  },
+  "f007": {
+    "value": "9842862174",
+    "confidence": 0.0,
+    "notes": "No mobile number found in the source document. [edited]"
+  },
+  "f008": {
+    "value": "hasonmagar@gmail.com",
+    "confidence": 0.0,
+    "notes": "No email address found in the source document. [edited]"
+  },
+  "f009": {
+    "value": "हसन गाहा",
+    "confidence": 1.0,
+    "notes": "Assumed submitter is the owner, extracted from 'नाम थर:' on citizenship. [edited]"
+  },
+  "f010": {
+    "value": "कालीगण्डकी गा०पा०-१, स्याङ्जा",
+    "confidence": 1.0,
+    "notes": "Assumed submitter's address is the same as the owner's permanent address (f006). [edited]"
+  },
+  "f011": {
+    "value": "स्वयं",
+    "confidence": 0.8,
+    "notes": "Assumed submitter is the owner ('स्वयं') as no other relationship is indicated and the owner's name is used for submitter."
+  },
+  "f012": {
+    "value": "9842862174",
+    "confidence": 0.0,
+    "notes": "No mobile number found in the source document for the submitter. [edited]"
+  },
+  "f014": {
+    "value": "",
+    "confidence": 0.0,
+    "notes": "No submission date found in the source document. Birth date is available but not relevant for submission date."
+  },
+  "f013": {
+    "value": "",
+    "confidence": 0.0,
+    "notes": "Signature field, no text to extract."
+  }
+}

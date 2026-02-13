@@ -1,0 +1,73 @@
+{
+  "f001": {
+    "value": "Y",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f002": {
+    "value": "छ “छी छै पिरले पा भ छ नि",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f003": {
+    "value": "वी हा",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f004": {
+    "value": "जज",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f005": {
+    "value": "लि पिर छ ची “छ",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f006": {
+    "value": "सा. । नि । थ",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f007": {
+    "value": "F _oomsaiie. % § ] ] o",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f008": {
+    "value": "M 7 - 77T S @ \\ NIy |mIN?",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f009": {
+    "value": "छै चल",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f010": {
+    "value": "वो  \" झै ।",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f011": {
+    "value": "४ वि उ ।'नुणी",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f012": {
+    "value": "T B YA B SR",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f014": {
+    "value": "\" TR T o o W",
+    "confidence": 0.8,
+    "notes": "ocr_fallback [edited]"
+  },
+  "f013": {
+    "value": "",
+    "confidence": 0.0,
+    "notes": "ocr_fallback",
+    "source_image": 1
+  }
+}
