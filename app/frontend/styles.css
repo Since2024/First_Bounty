@@ -1,0 +1,186 @@
+/* Main theme colors */
+:root {
+    --primary-color: #6366f1;
+    --primary-hover: #4f46e5;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --background-light: #f9fafb;
+    --card-background: #ffffff;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+}
+
+/* Hide Streamlit branding */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* Global Typography */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text-primary);
+}
+
+/* Beautiful header */
+.main-header {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.main-header h1 {
+    color: white;
+    font-size: 2.5rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+}
+
+.main-header p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    margin-top: 0.25rem;
+    font-weight: 400;
+}
+
+/* Step cards */
+.step-card {
+    background: var(--card-background);
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    display: flex;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.step-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.step-number {
+    background: var(--primary-color);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+/* Confidence badges */
+.confidence-high {
+    color: var(--success-color);
+    font-weight: 600;
+    background: #d1fae5;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+}
+
+.confidence-medium {
+    color: var(--warning-color);
+    font-weight: 600;
+    background: #fef3c7;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+}
+
+.confidence-low {
+    color: var(--danger-color);
+    font-weight: 600;
+    background: #fee2e2;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+}
+
+/* Input fields */
+.stTextInput > div > div > input {
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.stTextInput > div > div > input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Buttons */
+.stButton > button {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.stButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* File uploader */
+.uploadedFile {
+    border-radius: 12px;
+    border: 2px dashed var(--primary-color);
+    padding: 2rem;
+    background: var(--background-light);
+    text-align: center;
+}
+
+/* Field sections */
+.field-section {
+    background: var(--background-light);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.section-title {
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background-color: #f3f4f6;
+    border-right: 1px solid var(--border-color);
+}
+
+[data-testid="stSidebar"] .block-container {
+    padding-top: 2rem;
+}
+
+/* Utilities */
+.text-sm { font-size: 0.875rem; }
+.text-gray { color: var(--text-secondary); }
+.font-bold { font-weight: 600; }
