@@ -12,7 +12,7 @@ def render_sidebar():
         if "active_sidebar_section" not in st.session_state:
             st.session_state.active_sidebar_section = None
             
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("👤 Profile", use_container_width=True, 
                         type="primary" if st.session_state.active_sidebar_section == "user" else "secondary"):
@@ -20,6 +20,12 @@ def render_sidebar():
                 st.rerun()
         
         with col2:
+            if st.button("🔍 Verify", use_container_width=True,
+                        type="primary" if st.session_state.active_sidebar_section == "verify" else "secondary"):
+                st.session_state.active_sidebar_section = "verify" if st.session_state.active_sidebar_section != "verify" else None
+                st.rerun()
+        
+        with col3:
             if st.button("🔐 Admin", use_container_width=True,
                         type="primary" if st.session_state.active_sidebar_section == "admin" else "secondary"):
                 st.session_state.active_sidebar_section = "admin" if st.session_state.active_sidebar_section != "admin" else None

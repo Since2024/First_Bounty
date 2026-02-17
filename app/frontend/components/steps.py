@@ -109,7 +109,17 @@ def _run_extraction(files, template, force, template_path, template_name):
     except Exception as e:
         status.error(f"Failed: {e}")
 
+from app.solana_utils import create_memo_transaction, create_sign_transaction_url
+import hashlib
+import base64
+import base58
+
 def render_step_review():
+    # Show download section if PDF was generated (even if extraction is cleared)
+    if "generated_pdf_path" in st.session_state and "current_extraction" not in st.session_state:
+        _render_download_section()
+        return
+    
     if "current_extraction" not in st.session_state:
         return
 
@@ -365,6 +375,77 @@ def _render_download_section():
                 type="primary"
             )
         with c2:
+            # Check if wallet connected
+            if "phantom_wallet" in st.session_state:
+                if st.button("⛓️ Verify on Solana", use_container_width=True, type="secondary"):
+                    # 1. Calculate Hash of the PDF
+                    pdf_bytes = path.read_bytes()
+                    pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
+                    
+                    # Store hash in session for callback handling
+                    st.session_state.pending_verification_hash = pdf_hash
+                    
+                    try:
+                        with st.spinner("🔗 Preparing transaction..."):
+                            from solana.rpc.api import Client
+                            client = Client("https://api.devnet.solana.com")
+                            blockhash = client.get_latest_blockhash().value.blockhash
+                            blockhash_str = str(blockhash)
+                            
+                            # Create Memo Tx
+                            wallet_pubkey = st.session_state.phantom_wallet
+                            memo_text = f"FOMO Verified: {pdf_hash}"
+                            
+                            txn_bytes = create_memo_transaction(wallet_pubkey, memo_text, blockhash_str)
+                            txn_base58 = base58.b58encode(txn_bytes).decode("utf-8")
+                            
+                            # 3. Generate Deep Link
+                            dapp_private_key = st.session_state.dapp_keypair[0]
+                            phantom_pubkey = st.session_state.get("phantom_encryption_key")
+                            session = st.session_state.get("phantom_session")
+                            
+                            # URL to redirect back to
+                            redirect_url = "http://localhost:8501"
+                            
+                            deep_link = create_sign_transaction_url(
+                                dapp_private_key,
+                                phantom_pubkey,
+                                txn_base58,
+                                session,
+                                redirect_url
+                            )
+                            
+                        st.success("✅ Transaction ready!")
+                        st.link_button("🚀 Sign in Phantom", deep_link, use_container_width=True)
+                        st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
+                        st.caption("Click above to open Phantom and sign the transaction")
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error creating transaction: {e}")
+                        st.caption("Ensure internet connection for Devnet.")
+                
+                # Handle transaction callback from Phantom
+                if "phantom_tx_signature" in st.query_params and "pending_verification_hash" in st.session_state:
+                    from app.solana_utils import save_document_proof
+                    
+                    signature = st.query_params["phantom_tx_signature"]
+                    file_hash = st.session_state.pending_verification_hash
+                    wallet = st.session_state.phantom_wallet
+                    
+                    try:
+                        explorer_link = save_document_proof(file_hash, signature, wallet)
+                        st.success("🎉 Document verified on Solana!")
+                        st.markdown(f"**[View on Explorer]({explorer_link})**")
+                        
+                        # Clean up
+                        del st.session_state.pending_verification_hash
+                        st.query_params.clear()
+                    except Exception as e:
+                        st.error(f"Failed to save proof: {e}")
+
+            else:
+                 st.info("Connect Phantom wallet in sidebar/header to enable Blockchain Verification.")
+
             if st.button("Start New Form", use_container_width=True):
                 del st.session_state.generated_pdf_path
                 st.rerun()

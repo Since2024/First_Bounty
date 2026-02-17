@@ -59,6 +59,9 @@ render_sidebar()
 # 3. Main Content Area
 if st.session_state.get("admin_logged_in"):
     render_admin_dashboard()
+elif st.session_state.get("active_sidebar_section") == "verify":
+    from app.frontend.components.verification import render_verification_page
+    render_verification_page()
 else:
     # Step 1: Template
     template_path, template_data = render_step_template_selection()

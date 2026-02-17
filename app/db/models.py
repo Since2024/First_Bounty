@@ -104,5 +104,31 @@ class UserProfile(Base):
         }
 
 
-__all__ = ["Base", "FormSubmission", "UserProfile"]
+class DocumentProof(Base):
+    """Track documents verified on Solana blockchain."""
+    __tablename__ = "document_proofs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    file_hash = Column(String(64), unique=True, nullable=False, index=True)  # SHA-256 hash
+    transaction_signature = Column(String(128), nullable=False, index=True)
+    wallet_address = Column(String(64), nullable=False)
+    explorer_link = Column(String(500), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index('idx_hash_created', 'file_hash', 'created_at'),
+    )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "file_hash": self.file_hash,
+            "transaction_signature": self.transaction_signature,
+            "wallet_address": self.wallet_address,
+            "explorer_link": self.explorer_link,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+__all__ = ["Base", "FormSubmission", "UserProfile", "DocumentProof"]
 
