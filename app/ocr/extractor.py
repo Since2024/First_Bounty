@@ -4,20 +4,25 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-import cv2
 import numpy as np
 import pytesseract
-from pytesseract import TesseractError
+from pytesseract import TesseractError, TesseractNotFoundError
 from PIL import Image
 
 from app.utils import get_logger, template_fields
 
 logger = get_logger(__name__)
 
+try:
+    import cv2  # type: ignore
+except ImportError:  # pragma: no cover - depends on system libs
+    cv2 = None
+    logger.warning("OpenCV unavailable; OCR fallback will use PIL-only preprocessing.")
+
 AVAILABLE_LANGS: List[str] = []
 try:
     AVAILABLE_LANGS = pytesseract.get_languages(config="")
-except pytesseract.TesseractError:
+except (pytesseract.TesseractError, TesseractNotFoundError):
     logger.warning("Unable to list Tesseract languages; defaulting to eng.")
 
 VALID_LANG_FALLBACK = "eng"
@@ -44,6 +49,14 @@ class OCRFallbackError(RuntimeError):
 
 
 def _preprocess(region):
+    if cv2 is None:
+        # PIL fallback for environments without libGL/OpenCV runtime.
+        pil_image = Image.fromarray(region)
+        gray = pil_image.convert("L")
+        arr = np.array(gray)
+        # Basic binary threshold to boost OCR contrast.
+        return np.where(arr > 170, 255, 0).astype(np.uint8)
+
     gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
     return cv2.adaptiveThreshold(
@@ -61,7 +74,7 @@ def _extract_region_text(region, lang: str, psm: int) -> str:
     config = f"--psm {psm} --oem 3"
     try:
         result = pytesseract.image_to_string(pil_image, lang=lang, config=config)
-    except TesseractError as exc:
+    except (TesseractError, TesseractNotFoundError) as exc:
         raise OCRFallbackError(str(exc)) from exc
     return result.strip()
 
@@ -69,7 +82,11 @@ def _extract_region_text(region, lang: str, psm: int) -> str:
 def extract_fields_with_ocr(image_path: str, template_json: Dict) -> Dict[str, Dict]:
     """Fallback extraction relying on local Tesseract."""
     logger.warning("Running OCR fallback for %s", image_path)
-    image = cv2.imread(image_path)
+    if cv2 is None:
+        pil_image = Image.open(image_path).convert("RGB")
+        image = np.array(pil_image)
+    else:
+        image = cv2.imread(image_path)
     if image is None:
         raise OCRFallbackError(f"Cannot read image: {image_path}")
 
@@ -162,4 +179,3 @@ def extract_fields_from_multiple_images(
 
 
 __all__ = ["extract_fields_with_ocr", "extract_fields_from_multiple_images", "OCRFallbackError"]
-

@@ -8,6 +8,14 @@ from app.services.extraction_service import ExtractionService
 from app.utils import load_template_file
 
 
+@pytest.fixture(autouse=True)
+def _clear_cache_each_test():
+    from app.utils.cache import clear_cache
+    clear_cache()
+    yield
+    clear_cache()
+
+
 @pytest.fixture
 def sample_template():
     """Load a sample template for testing."""
