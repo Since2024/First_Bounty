@@ -129,3 +129,18 @@ def _render_system_status():
         st.markdown("🟢 Gemini API: Connected")
     else:
         st.markdown("🔴 Gemini API: Disconnected")
+    
+    # Solana status
+    try:
+        import requests
+        r = requests.post(
+            "https://api.devnet.solana.com",
+            json={"jsonrpc": "2.0", "id": 1, "method": "getHealth"},
+            timeout=3
+        )
+        if r.status_code == 200 and r.json().get("result") == "ok":
+            st.markdown("🟢 Solana Devnet: Connected")
+        else:
+            st.markdown("🟡 Solana Devnet: Slow")
+    except Exception:
+        st.markdown("🟡 Solana Devnet: Slow (normal)")

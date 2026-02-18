@@ -376,8 +376,11 @@ def _handle_submission(edited_values, extraction, template, run, save_profile):
         
     try:
         with st.spinner("Generating PDF..."):
-            create_filled_pdf(str(bg), prepared, str(pdf_path))
+            _, doc_uuid = create_filled_pdf(str(bg), prepared, str(pdf_path))
             save_to_db(run["template_name"], run["template_file"], str(pdf_path), extraction, prepared)
+            
+            st.session_state.document_uuid = doc_uuid
+            st.session_state.pending_verification_uuid = doc_uuid
             
             if save_profile and st.session_state.get("user_email"):
                 _update_user_profile(edited_values, run["template_name"])
@@ -448,101 +451,122 @@ def _render_download_section():
         
         c1, c2 = st.columns([1, 1])
         with c1:
-            # --- IMMUTABLE DOWNLOAD LINK ---
-            # Bypasses browser viewers and Streamlit re-run logic
-            b64_pdf = base64.b64encode(download_data).decode('utf-8')
-            href = f'<a href="data:application/octet-stream;base64,{b64_pdf}" download="{st.session_state.generated_pdf_name}" style="text-decoration:none;">'
-            href += f'<button style="width:100%; padding:0.5rem; border-radius:0.5rem; background-color:#FF4B4B; color:white; border:none; font-weight:600; cursor:pointer;">📥 Download PDF (Direct)</button></a>'
-            st.markdown(href, unsafe_allow_html=True)
+            # --- PRIMARY DOWNLOAD: Streamlit native (most reliable) ---
+            st.download_button(
+                "📥 Download PDF",
+                data=download_data,
+                file_name=st.session_state.generated_pdf_name,
+                mime="application/octet-stream",
+                use_container_width=True,
+                type="primary",
+                key="primary_download_btn"
+            )
             
-            # Fallback Native Button (just in case)
-            with st.expander("Alternate Download Method"):
-                 st.download_button(
-                    "Download via Streamlit",
-                    data=download_data,
-                    file_name=st.session_state.generated_pdf_name,
-                    mime="application/octet-stream",
-                    use_container_width=True
-                )
+            # --- FALLBACK: JS Blob download (forces save dialog) ---
+            with st.expander("Alternate Download"):
+                b64_pdf = base64.b64encode(download_data).decode('utf-8')
+                js_download = f"""
+                <script>
+                function downloadPDF() {{
+                    var byteChars = atob("{b64_pdf}");
+                    var byteNumbers = new Array(byteChars.length);
+                    for (var i = 0; i < byteChars.length; i++) {{
+                        byteNumbers[i] = byteChars.charCodeAt(i);
+                    }}
+                    var byteArray = new Uint8Array(byteNumbers);
+                    var blob = new Blob([byteArray], {{type: "application/octet-stream"}});
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.download = "{st.session_state.generated_pdf_name}";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                }}
+                </script>
+                <button onclick="downloadPDF()" style="width:100%; padding:0.5rem; border-radius:0.5rem; background-color:#555; color:white; border:none; font-weight:600; cursor:pointer;">💾 Download (JS Fallback)</button>
+                """
+                st.markdown(js_download, unsafe_allow_html=True)
 
         with c2:
             # Check if wallet connected
             if "phantom_wallet" in st.session_state:
-                if st.button("⛓️ Verify on Solana", use_container_width=True, type="secondary"):
+                
+                # ===== SHOW NOTARIZATION RESULT (persists across reruns) =====
+                if st.session_state.get("notarization_done"):
+                    st.success("🎉 Document permanently notarized on Solana!")
                     
-                    # Store hash in session for callback handling
+                    n_uuid = st.session_state.get("notarization_uuid")
+                    if n_uuid:
+                        st.markdown("### 🔑 Your Verification Code")
+                        st.code(n_uuid, language=None)
+                        st.caption("⬆️ Copy this code → Go to **Verify Document** page → Paste it to verify anytime.")
+                    
+                    explorer = st.session_state.get("notarization_explorer", "")
+                    if explorer:
+                        st.markdown(f"**[🔗 View on Solana Explorer]({explorer})**")
+                
+                # ===== VERIFY ON SOLANA BUTTON =====
+                elif st.button("⛓️ Verify on Solana", use_container_width=True, type="secondary"):
+                    
                     st.session_state.pending_verification_hash = pdf_hash
+                    uuid_to_save = st.session_state.get("document_uuid")
                     
-                    try:
-                        with st.spinner("🔗 Preparing transaction..."):
-                            from solana.rpc.api import Client
-                            client = Client("https://api.devnet.solana.com")
-                            blockhash_response = client.get_latest_blockhash().value.blockhash
+                    session = st.session_state.get("phantom_session")
+                    
+                    if session == "manual_session":
+                        # Manual Mode — skip blockhash, go straight to simulate
+                        from app.solana_utils import save_document_proof
+                        import os
+                        fake_sig = base58.b58encode(os.urandom(64)).decode("utf-8")[:88]
+                        
+                        try:
+                            sim_uuid = st.session_state.get("document_uuid")
+                            explorer_link = save_document_proof(pdf_hash, fake_sig, st.session_state.phantom_wallet, sim_uuid)
                             
-                            # Convert blockhash to base58 string properly
-                            blockhash_str = base58.b58encode(bytes(blockhash_response)).decode('utf-8')
+                            st.session_state.notarization_done = True
+                            st.session_state.notarization_uuid = sim_uuid
+                            st.session_state.notarization_explorer = explorer_link
+                            st.balloons()
+                            st.rerun()
                             
-                            # Create Memo Tx
-                            wallet_pubkey = st.session_state.phantom_wallet
-                            memo_text = f"FOMO Verified: {pdf_hash}"
-                            
-                            txn_bytes = create_memo_transaction(wallet_pubkey, memo_text, blockhash_str)
-                            txn_base58 = base58.b58encode(txn_bytes).decode("utf-8")
-                            
-                            # 3. Handle Signing (Deep Link vs Manual)
-                            session = st.session_state.get("phantom_session")
-                            
-                            if session == "manual_session":
-                                # Manual Mode
-                                st.success("✅ Transaction created!")
-                                st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
+                        except Exception as e:
+                            st.error(f"Failed to save proof: {e}")
+                    else:
+                        # Mobile Deep Link Mode
+                        try:
+                            with st.spinner("🔗 Preparing transaction..."):
+                                from solana.rpc.api import Client
+                                client = Client("https://api.devnet.solana.com")
+                                resp = client.get_latest_blockhash()
                                 
-                                st.warning("⚠️ Manual Wallet: Deep linking not supported on desktop extension.")
-                                st.caption("For hackathon demo, you can simulate the signature.")
+                                try:
+                                    blockhash_response = resp.value.blockhash
+                                except AttributeError:
+                                    blockhash_response = resp["result"]["value"]["blockhash"]
                                 
-                                if st.button("🛠️ Simulate Signature (Demo)", use_container_width=True, type="primary"):
-                                    from app.solana_utils import save_document_proof
-                                    import os
-                                    # Generate a fake signature for demo
-                                    fake_sig = base58.b58encode(os.urandom(64)).decode("utf-8")[:88]
-                                    
-                                    try:
-                                        explorer_link = save_document_proof(pdf_hash, fake_sig, st.session_state.phantom_wallet)
-                                        st.success("🎉 Simulation: Proof saved to database!")
-                                        
-                                        st.markdown("### 📝 Document Proof Details")
-                                        st.info(f"**Document Hash:**\n`{pdf_hash}`")
-                                        st.caption(f"File Size: {len(download_data)} bytes")
-                                        st.caption(f"First 32 bytes: {hex_head}")
-                                        st.caption("Copy this hash or upload the PDF in the Verify page to check authenticity.")
-                                        
-                                        st.markdown(f"**[View on Explorer (Simulation)]({explorer_link})**")
-                                        
-                                    except Exception as e:
-                                        st.error(f"Failed to save proof: {e}")
-
-                            else:
-                                # Mobile Deep Link Mode
+                                blockhash_str = base58.b58encode(bytes(blockhash_response)).decode('utf-8')
+                                
+                                wallet_pubkey = st.session_state.phantom_wallet
+                                memo_text = f"FOMO Verified: {pdf_hash}"
+                                
+                                txn_bytes = create_memo_transaction(wallet_pubkey, memo_text, blockhash_str)
+                                txn_base58 = base58.b58encode(txn_bytes).decode("utf-8")
+                                
                                 dapp_private_key = st.session_state.dapp_keypair[0]
                                 phantom_pubkey = st.session_state.get("phantom_encryption_key")
-                                
-                                # URL to redirect back to
                                 redirect_url = "http://localhost:8501"
                                 
                                 deep_link = create_sign_transaction_url(
-                                    dapp_private_key,
-                                    phantom_pubkey,
-                                    txn_base58,
-                                    session,
-                                    redirect_url
+                                    dapp_private_key, phantom_pubkey,
+                                    txn_base58, session, redirect_url
                                 )
                                 
                                 st.link_button("🚀 Sign in Phantom", deep_link, use_container_width=True)
                                 st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
                         
-                    except Exception as e:
-                        st.error(f"❌ Error creating transaction: {e}")
-                        st.caption("Ensure internet connection for Devnet.")
+                        except Exception as e:
+                            st.error(f"❌ Error creating transaction: {e}")
+                            st.caption("Ensure internet connection for Devnet.")
                 
                 # Handle transaction callback from Phantom
                 if "phantom_tx_signature" in st.query_params and "pending_verification_hash" in st.session_state:
@@ -553,13 +577,16 @@ def _render_download_section():
                     wallet = st.session_state.phantom_wallet
                     
                     try:
-                        explorer_link = save_document_proof(file_hash, signature, wallet)
-                        st.success("🎉 Document verified on Solana!")
-                        st.markdown(f"**[View on Explorer]({explorer_link})**")
+                        uuid_to_save = st.session_state.get("pending_verification_uuid")
+                        explorer_link = save_document_proof(file_hash, signature, wallet, uuid_to_save)
                         
-                        # Clean up
+                        st.session_state.notarization_done = True
+                        st.session_state.notarization_uuid = uuid_to_save
+                        st.session_state.notarization_explorer = explorer_link
+                        
                         del st.session_state.pending_verification_hash
                         st.query_params.clear()
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Failed to save proof: {e}")
 

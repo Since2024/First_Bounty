@@ -110,6 +110,7 @@ class DocumentProof(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     file_hash = Column(String(64), unique=True, nullable=False, index=True)  # SHA-256 hash
+    document_uuid = Column(String(36), nullable=True, index=True)  # UUID for robust verification
     transaction_signature = Column(String(128), nullable=False, index=True)
     wallet_address = Column(String(64), nullable=False)
     explorer_link = Column(String(500), nullable=False)
@@ -123,6 +124,7 @@ class DocumentProof(Base):
         return {
             "id": self.id,
             "file_hash": self.file_hash,
+            "document_uuid": self.document_uuid,
             "transaction_signature": self.transaction_signature,
             "wallet_address": self.wallet_address,
             "explorer_link": self.explorer_link,

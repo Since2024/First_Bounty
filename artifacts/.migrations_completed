@@ -1,2 +1,3 @@
 add_password_hash_column
 add_user_email_to_submissions
+add_document_uuid_column

@@ -17,7 +17,12 @@ In Nepal, government and banking paperwork is manual, repetitive, and prone to e
 **FOMO** solves this by combining **Generative AI** with **Blockchain Immutability**:
 1.  **AI Extraction**: Users upload an image (Citizenship, License, etc.), and Gemini extracts the text instantly.
 2.  **Auto-Filling**: The data is mapped to industry-standard templates (KYC, Account Opening).
-3.  **Proof of Existence**: The final generated PDF is hashed (SHA-256), and this hash is stored on the Solana Blockchain as a "Memo" transaction. This creates an **immutable digital certificate** that proves the document existed in that state.
+3.  **Proof of Existence**: The final generated PDF is hashed (SHA-256) and assigned a **Unique ID (UUID)**. unique ID. This proof is stored on the Solana Blockchain as a "Memo" transaction, creating an **immutable digital certificate**.
+
+### ✅ Robust Verification
+We use a dual-layer verification system to ensure documents can always be verified, even if they are modified (e.g., "Save As" in a browser):
+1.  **Exact Match**: Checks the SHA-256 hash of the file. (Most Secure)
+2.  **UUID Fallback**: Checks the embedded UUID in the PDF metadata if the hash doesn't match. (Resilient)
 
 ---
 
@@ -26,7 +31,8 @@ In Nepal, government and banking paperwork is manual, repetitive, and prone to e
 -   **AI Engine**: Google Gemini 1.5 Flash
 -   **Blockchain**: Solana (Devnet)
 -   **Wallet**: Phantom (via Deep Linking)
--   **Data**: SQLite
+-   **Data**: SQLite & SQLAlchemy
+-   **PDF Generation**: ReportLab & PyMuPDF
 
 ---
 
@@ -36,6 +42,7 @@ In Nepal, government and banking paperwork is manual, repetitive, and prone to e
 -   **✏️ Human-in-the-Loop**: Review and edit the AI's output before finalizing.
 -   **🟣 Phantom Deep Linking**: Connect your mobile or desktop wallet seamlessly.
 -   **🔒 On-Chain Verification**: One-click to sign a transaction and mint a "Proof of Existence" on Solana.
+-   **🛡️ Tamper Check**: Detects if a document has been modified since issuance.
 
 ---
 
@@ -43,8 +50,8 @@ In Nepal, government and banking paperwork is manual, repetitive, and prone to e
 
 ### Prerequisites
 -   Python 3.10+
--   Google Gemini API Key
--   Phantom Wallet (Mobile or Extension)
+-   Google Gemini API Key covering [Google AI Studio](https://aistudio.google.com/)
+-   Phantom Wallet (Mobile or Extension) connected to **Solana Devnet**.
 
 ### 1. Clone the Repository
 ```bash
@@ -52,32 +59,49 @@ git clone https://github.com/yourusername/fomo-solana.git
 cd fomo-solana
 ```
 
-### 2. Install Dependencies
+### 2. Configure Environment
+Create a `.env` file in the root directory:
 ```bash
-pip install -r requirements.txt
+cp .env.example .env  # If example exists, otherwise create new
 ```
 
-### 3. Configure Environment
-Create a `.env` file in the root directory:
+Add your keys:
 ```env
 # Get key from: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_gemini_api_key
 
-# Admin Credentials (Optional)
+# Admin Credentials (Optional - for dashboard)
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=admin123
+```
+
+### 3. Install Dependencies
+It is recommended to use a virtual environment:
+
+```bash
+# Create virtual environment
+python3 -m venv .venv
+
+# Activate it
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
+
+# Install packages
+pip install -r requirements.txt
 ```
 
 ### 4. Run the App
 ```bash
 streamlit run app/frontend/ui.py
-# Access at http://localhost:8501
 ```
+Access the app at `http://localhost:8501`.
 
 ---
 
-## 🎥 Demo
-*(Add your demo video link here)*
+## 🧪 Testing Verification
+1.  **Fill a Form**: Complete a form generation flow.
+2.  **Verify (Exact)**: Download the PDF and upload it to the "Verify" page. It should be "Verified".
+3.  **Verify (Modified)**: Open the PDF, "Save As" a copy, and upload the copy. It should be "Verified with Warnings".
 
 ---
 

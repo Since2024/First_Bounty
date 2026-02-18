@@ -12,6 +12,7 @@ from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
+import uuid
 
 from app.utils import get_logger
 
@@ -47,8 +48,12 @@ def create_filled_pdf(
     template_image: str,
     fields: List[Dict],
     output_path: str,
-) -> str:
-    """Create a PDF with fields overlaid on background image."""
+) -> tuple[str, str]:
+    """Create a PDF with fields overlaid on background image.
+    
+    Returns:
+        tuple[str, str]: (output_path, document_uuid)
+    """
     
     if not fields:
         raise ValueError("No fields provided for PDF generation")
@@ -71,29 +76,44 @@ def create_filled_pdf(
     logger.info(f"Scale factors: x={scale_x:.2f}, y={scale_y:.2f}")
     logger.info(f"Fields to render: {len(fields)}")
     
+    # Generate Unique Document ID
+    doc_uuid = str(uuid.uuid4())
+    logger.info(f"Generated Document UUID: {doc_uuid}")
+
     # Create PDF with FIXED metadata for determinism
-    # ReportLab adds current timestamp by default which changes hash every time
-    from datetime import datetime
-    fixed_date = datetime(2025, 1, 1) # Fixed date for reproducible builds
-    
+    # ReportLab embeds a creation timestamp DEEP inside the PDF stream.
+    # We must patch the internal _doc.info object AFTER canvas creation.
     c = canvas.Canvas(
         output_path, 
         pagesize=(bg_width, bg_height),
-        pageCompression=0 # Disable compression for easier binary debugging
+        pageCompression=0  # Disable compression for byte-level debugging
     )
     
-    # Force metadata to be constant
+    # Force metadata to be constant (surface-level setters)
     c.setTitle("FOMO Verified Form")
     c.setAuthor("FOMO AI")
-    c.setSubject("Verified Document")
-    # There isn't a direct public API to set creationDate in Canvas constructor easily in older reportlab 
-    # but we can overwrite it in the internal info object or just rely on the content being static.
-    # Actually, Canvas.setAuthor etc set the info dict. 
-    # We can manually patch the date if needed, but often just setting standard metadata helps.
+    c.setSubject(f"UUID:{doc_uuid}")  # Embed UUID in Subject field
+    c.setKeywords(f"FOMO, Verified, Document, {doc_uuid}")
     
-    # Modern ReportLab allows passing encript=None etc.
-    # To be 100% safe against timestamp, we can try to access c._doc.info
-    # but let's stick to standard setters first. If hash still changes, we will check bytes.
+    # CRITICAL: Patch the internal PDF info dictionary to fix the timestamp.
+    # ReportLab stores creation/modification dates in c._doc.info as a PDFDate object.
+    # We override them with a fixed string in PDF date format: D:YYYYMMDDHHmmSS
+    FIXED_PDF_DATE = "D:20250101000000+00'00'"
+    try:
+        from reportlab.pdfbase.pdfdoc import PDFDate, PDFString
+        # The info dict keys are 'CreationDate' and 'ModDate'
+        c._doc.info.CreationDate = PDFDate(FIXED_PDF_DATE)
+        c._doc.info.ModDate = PDFDate(FIXED_PDF_DATE)
+        logger.info("✅ PDF timestamps patched to fixed date for determinism.")
+    except Exception as e:
+        # Fallback: try direct string assignment
+        logger.warning(f"PDFDate patch failed ({e}), trying string fallback.")
+        try:
+            c._doc.info.CreationDate = FIXED_PDF_DATE
+            c._doc.info.ModDate = FIXED_PDF_DATE
+        except Exception as e2:
+            logger.error(f"Could not patch PDF date: {e2}")
+
 
     c.drawImage(template_image, 0, 0, width=bg_width, height=bg_height)
     
@@ -191,7 +211,32 @@ def create_filled_pdf(
     
     c.save()
     logger.info(f"✓ PDF saved: {output_path}")
-    return output_path
+    
+    # ============================================================
+    # NUCLEAR FALLBACK: Post-save byte-level timestamp scrubbing
+    # ============================================================
+    # Even with metadata patching, ReportLab may embed the current
+    # timestamp in the raw PDF stream as a comment or xref entry.
+    # We scrub it out by replacing any D:YYYYMMDD... pattern with a fixed one.
+    import re
+    try:
+        raw = Path(output_path).read_bytes()
+        # PDF date format: D:20250118143022+05'45' or D:20250118143022Z
+        # Replace ALL occurrences with a fixed date
+        scrubbed = re.sub(
+            rb"D:\d{14}[Z+\-][0-9']{0,6}",
+            b"D:20250101000000+00'00'",
+            raw
+        )
+        if scrubbed != raw:
+            Path(output_path).write_bytes(scrubbed)
+            logger.info("✅ Post-save: Dynamic timestamps scrubbed from PDF bytes.")
+        else:
+            logger.info("ℹ️ Post-save: No dynamic timestamps found in PDF bytes.")
+    except Exception as e:
+        logger.error(f"Post-save scrubbing failed: {e}")
+    
+    return output_path, doc_uuid
 
 
 __all__ = ["create_filled_pdf"]

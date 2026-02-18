@@ -125,17 +125,15 @@ def create_memo_transaction(
     return bytes(txn)
 
 
+# Solana RPC endpoint (Ankr is faster than default devnet)
+SOLANA_RPC_URL = "https://rpc.ankr.com/solana_devnet"
+
+
 def normalize_file_hash(file_hash: str) -> str:
     """Normalize SHA-256 hash representation for consistent storage/lookup."""
     return (file_hash or "").strip().lower()
 
-
-
-def normalize_file_hash(file_hash: str) -> str:
-    """Normalize SHA-256 hash representation for consistent storage/lookup."""
-    return (file_hash or "").strip().lower()
-
-def save_document_proof(file_hash: str, signature: str, wallet_address: str):
+def save_document_proof(file_hash: str, signature: str, wallet_address: str, document_uuid: str = None):
     """Save a document proof to the database."""
     from app.db.connection import get_session
     from app.db.models import DocumentProof
@@ -147,10 +145,15 @@ def save_document_proof(file_hash: str, signature: str, wallet_address: str):
     with get_session() as session:
         existing = session.query(DocumentProof).filter_by(file_hash=file_hash).first()
         if existing:
+            # Update UUID if missing
+            if document_uuid and not existing.document_uuid:
+                existing.document_uuid = document_uuid
+                session.commit()
             return existing.explorer_link
 
         proof = DocumentProof(
             file_hash=file_hash,
+            document_uuid=document_uuid,
             transaction_signature=signature,
             wallet_address=wallet_address,
             explorer_link=explorer_link,
@@ -161,17 +164,30 @@ def save_document_proof(file_hash: str, signature: str, wallet_address: str):
     return explorer_link
 
 
-def lookup_document_proof(file_hash: str):
-    """Look up a document proof by hash."""
+def lookup_document_proof(file_hash: str = None, document_uuid: str = None):
+    """Look up a document proof by hash OR UUID."""
     from app.db.connection import get_session
     from app.db.models import DocumentProof
     
-    file_hash = normalize_file_hash(file_hash)
+    if not file_hash and not document_uuid:
+        return None
 
     with get_session() as session:
-        proof = session.query(DocumentProof).filter_by(file_hash=file_hash).first()
-        if proof:
-            return proof.to_dict()
+        query = session.query(DocumentProof)
+        
+        if file_hash:
+            file_hash = normalize_file_hash(file_hash)
+            # Try finding by hash first
+            proof = query.filter_by(file_hash=file_hash).first()
+            if proof:
+                return proof.to_dict()
+        
+        if document_uuid:
+            # Fallback to UUID
+            proof = query.filter_by(document_uuid=document_uuid).first()
+            if proof:
+                return proof.to_dict()
+                
     return None
 
 
@@ -180,7 +196,7 @@ def verify_transaction_on_chain(signature: str) -> bool:
     try:
         from solana.rpc.api import Client
 
-        client = Client("https://api.devnet.solana.com")
+        client = Client(SOLANA_RPC_URL)
         response = client.get_transaction(signature)
         return response.value is not None
     except Exception as e:
