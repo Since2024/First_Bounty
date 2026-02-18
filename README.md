@@ -117,29 +117,5 @@ pytest -q
 
 ---
 
-## 💼 Demo-Day Script (60–90 sec)
-1. "A user uploads a citizenship card and we extract fields instantly."
-2. "They quickly verify/correct values and generate a ready-to-use form PDF."
-3. "We hash it and anchor proof metadata on Solana through Phantom."
-4. "Later, any verifier uploads a PDF and we confirm authenticity in seconds."
-5. "Result: less fraud, less manual work, and stronger trust in document workflows."
-
----
-
-## 📣 Build in Public (for brownie points)
-Use `docs/HACKATHON_WIN_PLAN.md` for:
-- submission checklist
-- X/LinkedIn post templates
-- demo video shot list
-- final hour strategy
-
----
-
 ## 👥 Team
-- **[Your Name]** — Full Stack / Product
-- **[Teammate Name]** — Solana / Smart Contract
-- **[Teammate Name]** — UX / Demo / GTM
-
----
-
-*Made with ❤️ in Nepal for the Solana ecosystem.*
+- **[Hasan Gaha]**
