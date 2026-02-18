@@ -39,6 +39,8 @@ def render_verification_page():
         file_hash = hashlib.sha256(file_bytes).hexdigest()
         
         st.info(f"📄 Document Hash: `{file_hash}`")
+        st.caption(f"Comparison: Make sure this hash matches the one shown during generation.\nFile Size: {len(file_bytes)} bytes")
+        st.caption(f"First 16 bytes: {file_bytes[:16].hex()}")
         
         if st.button("🔍 Check Verification Status", use_container_width=True, type="primary"):
             from app.solana_utils import lookup_document_proof, verify_transaction_on_chain
