@@ -439,29 +439,36 @@ def _render_download_section():
             download_data = st.session_state.generated_pdf_bytes
         else:
             download_data = path.read_bytes()
+            # Cache it now to be safe
+            st.session_state.generated_pdf_bytes = download_data
             
+        # Calculate Debug Info (Source of Truth)
+        pdf_hash = hashlib.sha256(download_data).hexdigest()
+        hex_head = download_data[:32].hex()
+        
         c1, c2 = st.columns([1, 1])
         with c1:
-            st.download_button(
-                "📥 Download PDF",
-                data=download_data,
-                file_name=st.session_state.generated_pdf_name,
-                mime="application/octet-stream", # Force download, don't open in browser (prevents hash change)
-                use_container_width=True,
-                type="primary"
-            )
+            # --- IMMUTABLE DOWNLOAD LINK ---
+            # Bypasses browser viewers and Streamlit re-run logic
+            b64_pdf = base64.b64encode(download_data).decode('utf-8')
+            href = f'<a href="data:application/octet-stream;base64,{b64_pdf}" download="{st.session_state.generated_pdf_name}" style="text-decoration:none;">'
+            href += f'<button style="width:100%; padding:0.5rem; border-radius:0.5rem; background-color:#FF4B4B; color:white; border:none; font-weight:600; cursor:pointer;">📥 Download PDF (Direct)</button></a>'
+            st.markdown(href, unsafe_allow_html=True)
+            
+            # Fallback Native Button (just in case)
+            with st.expander("Alternate Download Method"):
+                 st.download_button(
+                    "Download via Streamlit",
+                    data=download_data,
+                    file_name=st.session_state.generated_pdf_name,
+                    mime="application/octet-stream",
+                    use_container_width=True
+                )
+
         with c2:
             # Check if wallet connected
             if "phantom_wallet" in st.session_state:
                 if st.button("⛓️ Verify on Solana", use_container_width=True, type="secondary"):
-                    # 1. Calculate Hash of the PDF
-                    if "generated_pdf_bytes" in st.session_state:
-                        pdf_bytes = st.session_state.generated_pdf_bytes
-                    else:
-                        # Fallback (shouldn't happen with new logic, but safe to keep)
-                        pdf_bytes = path.read_bytes()
-                        
-                    pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
                     
                     # Store hash in session for callback handling
                     st.session_state.pending_verification_hash = pdf_hash
@@ -473,7 +480,6 @@ def _render_download_section():
                             blockhash_response = client.get_latest_blockhash().value.blockhash
                             
                             # Convert blockhash to base58 string properly
-                            # The blockhash is a Hash object, we need to encode its bytes
                             blockhash_str = base58.b58encode(bytes(blockhash_response)).decode('utf-8')
                             
                             # Create Memo Tx
@@ -487,7 +493,7 @@ def _render_download_section():
                             session = st.session_state.get("phantom_session")
                             
                             if session == "manual_session":
-                                # Manual Mode: Cannot Deep Link (no encryption key)
+                                # Manual Mode
                                 st.success("✅ Transaction created!")
                                 st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
                                 
@@ -506,12 +512,12 @@ def _render_download_section():
                                         
                                         st.markdown("### 📝 Document Proof Details")
                                         st.info(f"**Document Hash:**\n`{pdf_hash}`")
-                                        st.caption(f"File Size: {len(pdf_bytes)} bytes")
-                                        st.caption(f"First 16 bytes: {pdf_bytes[:16].hex()}")
+                                        st.caption(f"File Size: {len(download_data)} bytes")
+                                        st.caption(f"First 32 bytes: {hex_head}")
                                         st.caption("Copy this hash or upload the PDF in the Verify page to check authenticity.")
                                         
                                         st.markdown(f"**[View on Explorer (Simulation)]({explorer_link})**")
-                                        # Force a rerun to update UI state if needed, or just let users go to Verify page
+                                        
                                     except Exception as e:
                                         st.error(f"Failed to save proof: {e}")
 
@@ -533,7 +539,6 @@ def _render_download_section():
                                 
                                 st.link_button("🚀 Sign in Phantom", deep_link, use_container_width=True)
                                 st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
-                                st.caption("Click above to open Phantom and sign the transaction")
                         
                     except Exception as e:
                         st.error(f"❌ Error creating transaction: {e}")
@@ -564,3 +569,9 @@ def _render_download_section():
             if st.button("Start New Form", use_container_width=True):
                 del st.session_state.generated_pdf_path
                 st.rerun()
+
+        # --- DEVELOPER DEBUG PANEL ---
+        with st.expander("🛠️ Developer Debug Tools (Verification)"):
+             st.markdown(f"**SHA256 Hash:** `{pdf_hash}`")
+             st.markdown(f"**First 32 Bytes:** `{hex_head}`")
+             st.info("ℹ️ Compare these values with the 'Verify' page. They MUST match exactly.")

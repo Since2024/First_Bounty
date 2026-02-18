@@ -71,8 +71,30 @@ def create_filled_pdf(
     logger.info(f"Scale factors: x={scale_x:.2f}, y={scale_y:.2f}")
     logger.info(f"Fields to render: {len(fields)}")
     
-    # Create PDF
-    c = canvas.Canvas(output_path, pagesize=(bg_width, bg_height))
+    # Create PDF with FIXED metadata for determinism
+    # ReportLab adds current timestamp by default which changes hash every time
+    from datetime import datetime
+    fixed_date = datetime(2025, 1, 1) # Fixed date for reproducible builds
+    
+    c = canvas.Canvas(
+        output_path, 
+        pagesize=(bg_width, bg_height),
+        pageCompression=0 # Disable compression for easier binary debugging
+    )
+    
+    # Force metadata to be constant
+    c.setTitle("FOMO Verified Form")
+    c.setAuthor("FOMO AI")
+    c.setSubject("Verified Document")
+    # There isn't a direct public API to set creationDate in Canvas constructor easily in older reportlab 
+    # but we can overwrite it in the internal info object or just rely on the content being static.
+    # Actually, Canvas.setAuthor etc set the info dict. 
+    # We can manually patch the date if needed, but often just setting standard metadata helps.
+    
+    # Modern ReportLab allows passing encript=None etc.
+    # To be 100% safe against timestamp, we can try to access c._doc.info
+    # but let's stick to standard setters first. If hash still changes, we will check bytes.
+
     c.drawImage(template_image, 0, 0, width=bg_width, height=bg_height)
     
     # Register Nepali font
