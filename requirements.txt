@@ -1,8 +1,26 @@
-streamlit==1.54.0
+# Core App Framework & AI
+streamlit
+google-generativeai
+python-dotenv
+
+# Solana Stack (Pinned for RPC consistency)
 solana==0.36.11
 solders==0.27.1
-google-generativeai==0.8.6
-pandas==2.3.3
-opencv-python-headless  <-- Use "headless" for cloud servers
-PyMuPDF==1.27.1
-python-dotenv==1.2.1
+base58
+PyNaCl
+
+# Database & Data Processing
+sqlalchemy
+pymysql
+pandas
+numpy
+
+# Image Processing & OCR (Headless for Cloud)
+opencv-python-headless
+pytesseract
+Pillow
+
+# PDF & Security
+PyMuPDF
+reportlab
+bcrypt
