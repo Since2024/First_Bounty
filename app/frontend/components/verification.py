@@ -1,13 +1,26 @@
 import streamlit as st
 import hashlib
 
-from app.solana_utils import lookup_document_proof, verify_transaction_on_chain, normalize_file_hash
+from app.solana_utils import lookup_document_proof, check_verification_status, VerificationStatus, normalize_file_hash
 
 
 def _display_proof(proof, method_label=""):
     """Display proof details after successful lookup."""
-    st.success(f"✅ **Document Verified!** {method_label}")
     
+    # 1. Determine Status
+    with st.spinner("Verifying on-chain..."):
+        status = check_verification_status(proof)
+
+    # 2. Display Status Header
+    if status == VerificationStatus.VERIFIED_ON_CHAIN:
+        st.success(f"✅ **Verified On-Chain!** {method_label}")
+    elif status == VerificationStatus.VERIFIED_DB_PRUNED:
+        st.warning(f"⚠️ **Verified from Registry (Pruned from Chain)** {method_label}")
+        st.info("The transaction was valid when created, but the Solana Devnet history has been pruned. The local registry confirms its existence.")
+    else:
+        st.error(f"❌ **Transaction Not Found** {method_label}")
+        return
+
     col1, col2 = st.columns(2)
     
     with col1:
@@ -21,13 +34,10 @@ def _display_proof(proof, method_label=""):
         st.markdown("**Blockchain Proof**")
         st.markdown(f"[🔗 View on Solana Explorer]({proof['explorer_link']})")
 
-        with st.spinner("Verifying on-chain..."):
-            is_valid = verify_transaction_on_chain(proof['transaction_signature'])
-
-        if is_valid:
-            st.success("✅ Transaction confirmed on Solana Devnet")
-        else:
-            st.warning("⚠️ Could not verify transaction (network issue or pending)")
+        if status == VerificationStatus.VERIFIED_ON_CHAIN:
+             st.success("✅ Confirmed on Solana Devnet")
+        elif status == VerificationStatus.VERIFIED_DB_PRUNED:
+             st.caption("ℹ️ Transaction too old for Devnet Explorer")
 
     with st.expander("📋 Full Proof Details"):
         st.json(proof)

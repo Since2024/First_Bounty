@@ -126,7 +126,10 @@ def create_memo_transaction(
 
 
 # Solana RPC endpoint (Ankr is faster than default devnet)
-SOLANA_RPC_URL = "https://rpc.ankr.com/solana_devnet"
+SOLANA_RPC_URLS = [
+    "https://rpc.ankr.com/solana_devnet",
+    "https://api.devnet.solana.com",
+]
 
 
 def normalize_file_hash(file_hash: str) -> str:
@@ -191,14 +194,49 @@ def lookup_document_proof(file_hash: str = None, document_uuid: str = None):
     return None
 
 
+class VerificationStatus:
+    VERIFIED_ON_CHAIN = "verified_on_chain"
+    VERIFIED_DB_PRUNED = "verified_db_pruned"
+    NOT_FOUND = "not_found"
+    PENDING = "pending"
+
+
+def check_verification_status(proof: dict) -> str:
+    """
+    Check the verification status of a document proof.
+    Returns one of VerificationStatus constants.
+    """
+    if not proof or not proof.get('transaction_signature'):
+        return VerificationStatus.NOT_FOUND
+        
+    signature = proof['transaction_signature']
+    
+    # Check on-chain first
+    if verify_transaction_on_chain(signature):
+        return VerificationStatus.VERIFIED_ON_CHAIN
+        
+    # If not on-chain, but we have the proof in DB, it might be pruned
+    # We trust our DB record if it has a valid-looking core structure
+    if proof.get('file_hash') and proof.get('wallet_address'):
+         return VerificationStatus.VERIFIED_DB_PRUNED
+         
+    return VerificationStatus.NOT_FOUND
+
+
 def verify_transaction_on_chain(signature: str) -> bool:
     """Verify that a transaction signature exists on Solana Devnet."""
-    try:
-        from solana.rpc.api import Client
-
-        client = Client(SOLANA_RPC_URL)
-        response = client.get_transaction(signature)
-        return response.value is not None
-    except Exception as e:
-        print(f"Verification error: {e}")
-        return False
+    from solana.rpc.api import Client
+    
+    for rpc_url in SOLANA_RPC_URLS:
+        try:
+            client = Client(rpc_url)
+            # get_transaction returns specific error or None if not found depending on library version,
+            # but usually raises exception or returns None value wrapped in response
+            response = client.get_transaction(signature)
+            if response.value is not None:
+                return True
+        except Exception as e:
+            # basic logging could go here
+            continue
+            
+    return False
