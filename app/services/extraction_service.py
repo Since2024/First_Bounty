@@ -53,7 +53,7 @@ class ExtractionService:
             cached_gemini = get_cached_extraction(image_hashes, template_hash, engine_filter="gemini")
             if cached_gemini:
                 logger.info("Using cached Gemini extraction")
-                return cached_gemini, "cached_gemini", []
+                return cached_gemini, "cached", []
         
         # Try Gemini first (always attempt fresh Gemini if no cached Gemini found)
         
@@ -79,12 +79,12 @@ class ExtractionService:
                 cached_ocr = get_cached_extraction(image_hashes, template_hash, engine_filter="ocr")
                 if cached_ocr:
                     logger.info("Using cached OCR extraction (Gemini failed, using previous OCR result)")
-                    return cached_ocr, "cached_ocr", errors
+                    return cached_ocr, "cached", errors
             
+            temp_paths = []
             try:
                 logger.info("Falling back to OCR...")
-                temp_paths = []
-                
+
                 for idx, file in enumerate(uploaded_files):
                     tmp = tempfile.NamedTemporaryFile(
                         suffix=f"_{idx}.jpg",
@@ -93,21 +93,20 @@ class ExtractionService:
                     tmp.write(file.getvalue())
                     tmp.flush()
                     temp_paths.append(tmp.name)
-                
+
                 extraction = extract_fields_from_multiple_images(temp_paths, template)
-                
+
                 # Cache OCR extraction (but mark it as OCR so we can retry Gemini later)
                 set_cached_extraction(image_hashes, template_hash, extraction, engine="ocr")
-                
-                # Cleanup
-                for path in temp_paths:
-                    Path(path).unlink(missing_ok=True)
-                
+
                 return extraction, "ocr", errors
-                
+
             except OCRFallbackError as ocr_exc:
                 error_msg = f"OCR failed: {str(ocr_exc)}"
                 logger.error(error_msg)
                 errors.append(error_msg)
                 raise RuntimeError(f"All extraction methods failed: {'; '.join(errors)}")
+            finally:
+                for path in temp_paths:
+                    Path(path).unlink(missing_ok=True)
 
