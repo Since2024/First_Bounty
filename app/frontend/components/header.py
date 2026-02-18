@@ -99,9 +99,40 @@ def render_header(logo_path: Path):
         else:
             # Generate Deep Link
             _, public_key = st.session_state.dapp_keypair
-            # Use current URL or localhost for redirect
-            # Streamlit doesn't easily give current full URL, assume localhost for hackathon or env var
             redirect_url = "http://localhost:8501" 
             connect_url = create_connect_url(public_key, redirect_url)
             
-            st.link_button("🟣 Connect Phantom", connect_url, use_container_width=True)
+            st.markdown("**Connect Your Wallet**")
+            
+            # Option 1: Deep Link (for mobile)
+            st.link_button("🟣 Connect Phantom (Mobile)", connect_url, use_container_width=True)
+            
+            st.markdown("---")
+            st.caption("**Using browser extension?** Enter your wallet address manually:")
+            
+            # Option 2: Manual input (for browser extensions)
+            manual_wallet = st.text_input(
+                "Phantom Wallet Address",
+                placeholder="e.g., 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+                help="Copy your wallet address from Phantom extension (44 characters)"
+            )
+            
+            if st.button("✅ Connect Manually", use_container_width=True, type="secondary"):
+                if not manual_wallet:
+                    st.error("Please enter your wallet address")
+                elif len(manual_wallet) < 32 or len(manual_wallet) > 44:
+                    st.error("Invalid wallet address length. Should be 32-44 characters.")
+                else:
+                    # Validate it's a valid base58 Solana address
+                    try:
+                        from solders.pubkey import Pubkey
+                        Pubkey.from_string(manual_wallet)  # This will throw if invalid
+                        
+                        st.session_state.phantom_wallet = manual_wallet
+                        st.session_state.phantom_session = "manual_session"
+                        st.session_state.phantom_encryption_key = "manual_key"
+                        st.success(f"✅ Connected! Wallet: {manual_wallet[:4]}...{manual_wallet[-4:]}")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Invalid Solana wallet address. Please check and try again.")
+                        st.caption("Make sure you copied the full address from Phantom")

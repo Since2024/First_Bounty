@@ -36,9 +36,50 @@ def render_step_template_selection():
             return t['forms'][0].get('name', path.stem)
         return t.get('name', path.stem)
 
+    # Create choices dictionary
     choices = {_get_name(p): p for p in template_files}
-    selected_name = st.selectbox("Template", list(choices.keys()), label_visibility="collapsed")
-    return choices[selected_name], load_template_file(choices[selected_name].name)
+    
+    # Custom ordering: sampati first, business_front last
+    ordered_names = []
+    
+    # Find sampati and add first
+    for name in choices.keys():
+        if 'sampati' in name.lower():
+            ordered_names.append(name)
+            break
+    
+    # Add others (except business_front)
+    for name in sorted(choices.keys()):
+        if name not in ordered_names and 'business' not in name.lower():
+            ordered_names.append(name)
+    
+    # Add business_front last
+    for name in choices.keys():
+        if 'business' in name.lower():
+            ordered_names.append(name)
+            break
+    
+    # Initialize selection if not set
+    if "selected_template" not in st.session_state:
+        st.session_state.selected_template = ordered_names[0] if ordered_names else None
+    
+    # Use expander for template selection with dynamic label
+    expander_label = f"**Forms** - Selected: {st.session_state.selected_template}" if st.session_state.selected_template else "**Forms** - Click to select a template"
+    
+    with st.expander(expander_label, expanded=False):
+        selected_name = st.radio(
+            "Available Templates",
+            ordered_names,
+            index=ordered_names.index(st.session_state.selected_template) if st.session_state.selected_template in ordered_names else 0,
+            label_visibility="collapsed"
+        )
+        
+        # Update session state when selection changes
+        if selected_name != st.session_state.selected_template:
+            st.session_state.selected_template = selected_name
+            st.rerun()
+    
+    return choices[st.session_state.selected_template], load_template_file(choices[st.session_state.selected_template].name)
 
 def render_step_upload():
     st.markdown("""
@@ -71,6 +112,21 @@ def render_step_extraction(uploaded_files, template, template_path, template_nam
         </div>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Detect if files have changed - clear cache if so
+    current_file_names = [f.name for f in uploaded_files]
+    if "last_uploaded_files" not in st.session_state:
+        st.session_state.last_uploaded_files = current_file_names
+    elif st.session_state.last_uploaded_files != current_file_names:
+        # Files changed - clear old extraction and PDF
+        if "current_extraction" in st.session_state:
+            del st.session_state.current_extraction
+        if "generated_pdf_path" in st.session_state:
+            del st.session_state.generated_pdf_path
+        if "generated_pdf_name" in st.session_state:
+            del st.session_state.generated_pdf_name
+        st.session_state.last_uploaded_files = current_file_names
+        st.info("🔄 New files detected - cache cleared")
 
     col1, col2 = st.columns([1, 3])
     with col1:
@@ -115,11 +171,22 @@ import base64
 import base58
 
 def render_step_review():
-    # Show download section if PDF was generated (even if extraction is cleared)
-    if "generated_pdf_path" in st.session_state and "current_extraction" not in st.session_state:
+    # ALWAYS check for generated PDF first and render download section at the TOP
+    if "generated_pdf_path" in st.session_state:
+        st.markdown("### ✅ Form Completed")
         _render_download_section()
-        return
-    
+        st.markdown("---")
+        
+        # If we just finished generation (extraction cleared), we can stop here
+        if "current_extraction" not in st.session_state:
+            if st.button("Start New Extraction", use_container_width=True):
+                #Clear all session state related to extraction and PDF
+                if "generated_pdf_path" in st.session_state: del st.session_state.generated_pdf_path
+                if "generated_pdf_name" in st.session_state: del st.session_state.generated_pdf_name
+                if "current_extraction" in st.session_state: del st.session_state.current_extraction
+                st.rerun()
+            return
+
     if "current_extraction" not in st.session_state:
         return
 
@@ -318,6 +385,9 @@ def _handle_submission(edited_values, extraction, template, run, save_profile):
             st.session_state.generated_pdf_path = str(pdf_path)
             st.session_state.generated_pdf_name = pdf_path.name
             
+            # Store exact bytes to ensure consistency between hashing and downloading
+            st.session_state.generated_pdf_bytes = pdf_path.read_bytes()
+            
             # Update history
             st.session_state.runs.insert(0, {
                 **run,
@@ -364,13 +434,19 @@ def _render_download_section():
     
     path = Path(st.session_state.generated_pdf_path)
     if path.exists():
+        # Use stored bytes if available for consistency, otherwise read from disk
+        if "generated_pdf_bytes" in st.session_state:
+            download_data = st.session_state.generated_pdf_bytes
+        else:
+            download_data = path.read_bytes()
+            
         c1, c2 = st.columns([1, 1])
         with c1:
             st.download_button(
                 "📥 Download PDF",
-                data=path.read_bytes(),
+                data=download_data,
                 file_name=st.session_state.generated_pdf_name,
-                mime="application/pdf",
+                mime="application/octet-stream", # Force download, don't open in browser (prevents hash change)
                 use_container_width=True,
                 type="primary"
             )
@@ -379,7 +455,12 @@ def _render_download_section():
             if "phantom_wallet" in st.session_state:
                 if st.button("⛓️ Verify on Solana", use_container_width=True, type="secondary"):
                     # 1. Calculate Hash of the PDF
-                    pdf_bytes = path.read_bytes()
+                    if "generated_pdf_bytes" in st.session_state:
+                        pdf_bytes = st.session_state.generated_pdf_bytes
+                    else:
+                        # Fallback (shouldn't happen with new logic, but safe to keep)
+                        pdf_bytes = path.read_bytes()
+                        
                     pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
                     
                     # Store hash in session for callback handling
@@ -389,8 +470,11 @@ def _render_download_section():
                         with st.spinner("🔗 Preparing transaction..."):
                             from solana.rpc.api import Client
                             client = Client("https://api.devnet.solana.com")
-                            blockhash = client.get_latest_blockhash().value.blockhash
-                            blockhash_str = str(blockhash)
+                            blockhash_response = client.get_latest_blockhash().value.blockhash
+                            
+                            # Convert blockhash to base58 string properly
+                            # The blockhash is a Hash object, we need to encode its bytes
+                            blockhash_str = base58.b58encode(bytes(blockhash_response)).decode('utf-8')
                             
                             # Create Memo Tx
                             wallet_pubkey = st.session_state.phantom_wallet
@@ -399,26 +483,57 @@ def _render_download_section():
                             txn_bytes = create_memo_transaction(wallet_pubkey, memo_text, blockhash_str)
                             txn_base58 = base58.b58encode(txn_bytes).decode("utf-8")
                             
-                            # 3. Generate Deep Link
-                            dapp_private_key = st.session_state.dapp_keypair[0]
-                            phantom_pubkey = st.session_state.get("phantom_encryption_key")
+                            # 3. Handle Signing (Deep Link vs Manual)
                             session = st.session_state.get("phantom_session")
                             
-                            # URL to redirect back to
-                            redirect_url = "http://localhost:8501"
-                            
-                            deep_link = create_sign_transaction_url(
-                                dapp_private_key,
-                                phantom_pubkey,
-                                txn_base58,
-                                session,
-                                redirect_url
-                            )
-                            
-                        st.success("✅ Transaction ready!")
-                        st.link_button("🚀 Sign in Phantom", deep_link, use_container_width=True)
-                        st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
-                        st.caption("Click above to open Phantom and sign the transaction")
+                            if session == "manual_session":
+                                # Manual Mode: Cannot Deep Link (no encryption key)
+                                st.success("✅ Transaction created!")
+                                st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
+                                
+                                st.warning("⚠️ Manual Wallet: Deep linking not supported on desktop extension.")
+                                st.caption("For hackathon demo, you can simulate the signature.")
+                                
+                                if st.button("🛠️ Simulate Signature (Demo)", use_container_width=True, type="primary"):
+                                    from app.solana_utils import save_document_proof
+                                    import os
+                                    # Generate a fake signature for demo
+                                    fake_sig = base58.b58encode(os.urandom(64)).decode("utf-8")[:88]
+                                    
+                                    try:
+                                        explorer_link = save_document_proof(pdf_hash, fake_sig, st.session_state.phantom_wallet)
+                                        st.success("🎉 Simulation: Proof saved to database!")
+                                        
+                                        st.markdown("### 📝 Document Proof Details")
+                                        st.info(f"**Document Hash:**\n`{pdf_hash}`")
+                                        st.caption(f"File Size: {len(pdf_bytes)} bytes")
+                                        st.caption(f"First 16 bytes: {pdf_bytes[:16].hex()}")
+                                        st.caption("Copy this hash or upload the PDF in the Verify page to check authenticity.")
+                                        
+                                        st.markdown(f"**[View on Explorer (Simulation)]({explorer_link})**")
+                                        # Force a rerun to update UI state if needed, or just let users go to Verify page
+                                    except Exception as e:
+                                        st.error(f"Failed to save proof: {e}")
+
+                            else:
+                                # Mobile Deep Link Mode
+                                dapp_private_key = st.session_state.dapp_keypair[0]
+                                phantom_pubkey = st.session_state.get("phantom_encryption_key")
+                                
+                                # URL to redirect back to
+                                redirect_url = "http://localhost:8501"
+                                
+                                deep_link = create_sign_transaction_url(
+                                    dapp_private_key,
+                                    phantom_pubkey,
+                                    txn_base58,
+                                    session,
+                                    redirect_url
+                                )
+                                
+                                st.link_button("🚀 Sign in Phantom", deep_link, use_container_width=True)
+                                st.info(f"📄 Document Hash: `{pdf_hash[:16]}...`")
+                                st.caption("Click above to open Phantom and sign the transaction")
                         
                     except Exception as e:
                         st.error(f"❌ Error creating transaction: {e}")
