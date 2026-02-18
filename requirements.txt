@@ -19,7 +19,7 @@ PyMuPDF==1.27.1
 # OCR & Image Processing
 pytesseract==0.3.13
 opencv-python==4.13.0.92
-numpy==2.4.2
+numpy==1.26.4
 pillow==12.1.1
 
 # Database
