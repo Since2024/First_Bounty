@@ -130,11 +130,17 @@ def normalize_file_hash(file_hash: str) -> str:
     return (file_hash or "").strip().lower()
 
 
+
+def normalize_file_hash(file_hash: str) -> str:
+    """Normalize SHA-256 hash representation for consistent storage/lookup."""
+    return (file_hash or "").strip().lower()
+
 def save_document_proof(file_hash: str, signature: str, wallet_address: str):
     """Save a document proof to the database."""
     from app.db.connection import get_session
     from app.db.models import DocumentProof
 
+    
     file_hash = normalize_file_hash(file_hash)
     explorer_link = f"https://explorer.solana.com/tx/{signature}?cluster=devnet"
 
@@ -159,7 +165,7 @@ def lookup_document_proof(file_hash: str):
     """Look up a document proof by hash."""
     from app.db.connection import get_session
     from app.db.models import DocumentProof
-
+    
     file_hash = normalize_file_hash(file_hash)
 
     with get_session() as session:
